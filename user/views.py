@@ -6,23 +6,23 @@ from rest_framework import status
 from django.contrib.auth.models import User, auth
 from django.contrib.sites.shortcuts import get_current_site
 from django.urls import reverse
+from rest_framework.schemas import openapi
+
 from .models import User
 from .utils import Util
 import jwt
 from .serializers import RegisterSerializer, EmailVerificationSerializer, LoginSerializer, \
-    ResetPasswordEmailRequestSerializer
+    ResetPasswordEmailRequestSerializer, SetNewPasswordSerializer, LogoutSerializer
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.auth import login, logout
 from django.utils.encoding import smart_str, force_str, smart_bytes, DjangoUnicodeDecodeError
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
+import short_url
+import django_short_url
 
 # Create your views here.
 logger = logging.getLogger('django')
 
-
-# Todo add logger format
-# Todo add comments
-# Todo add exception handling
 
 class RegisterView(generics.GenericAPIView):
     serializer_class = RegisterSerializer
@@ -39,7 +39,6 @@ class RegisterView(generics.GenericAPIView):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             user_data = serializer.data
-            # Todo use model does not exist exception
             user = User.objects.get(email=user_data['email'])
             token = jwt.encode({'username': user.username}, settings.SECRET_KEY)
             current_site = get_current_site(request).domain
@@ -59,14 +58,15 @@ class RegisterView(generics.GenericAPIView):
 
 class VerifyEmail(views.APIView):
     """
-            This api is for verification of email to this application
-           @param request: once the account verification link is clicked by user this will take that request
-           @return: it will return the response of email activation
-     """
+        This api is for verification of email to this application
+        @param request: once the account verification link is clicked by user this will take that request
+        @return: it will return the response of email activation
+    """
     serializer_class = EmailVerificationSerializer
 
     def get(self, request):
         token = request.GET.get('token')
+
         try:
             payload = jwt.decode(token, settings.SECRET_KEY)
             user = User.objects.get(id=payload['user_id'])
@@ -89,32 +89,14 @@ class LoginAPIView(generics.GenericAPIView):
     """
     serializer_class = LoginSerializer
 
-    # Todo add exceptions
-    # Todo validate each field
-
     def post(self, request):
-        serializer = self.serializer_class(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class LogoutAPIView(generics.GenericAPIView):
-    """
-           This api is to log out the user
-           @return: release all resources from user on logging out
-    """
-    serializer_class = LoginSerializer
-
-    def get(self, request):
         try:
-            user = request.user
-            logout(request)
-            logger.info('You have been successfully logged out, Thank You!!')
-            return Response({'details': 'You have been successfully logged out, Thank You!!'},
-                            status=status.HTTP_200_OK)
+            serializer = self.serializer_class(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(e)
-            return Response({'details': 'something went wrong while logout'}, status=status.HTTP_403_FORBIDDEN)
+            return Response("Something went wrong")
 
 
 class RequestPasswordResetEmail(generics.GenericAPIView):
@@ -137,11 +119,73 @@ class RequestPasswordResetEmail(generics.GenericAPIView):
             relative_link = reverse(
                 'password-reset-confirm', kwargs={'uidb64': uidb64, 'token': token})
             redirect_url = request.data.get('redirect_url', '')
-            absurl = 'http://' + current_site + relative_link
+            abs_url = 'http://' + current_site + relative_link
             email_body = 'Hello, \n Use link below to reset your password  \n' + \
-                         absurl + "?redirect_url=" + redirect_url
+                         abs_url + "?redirect_url=" + redirect_url
             data = {'email_body': email_body, 'to_email': user.email,
                     'email_subject': 'Reset your passsword'}
             Util.send_email(data)
         return Response({'success': 'We have sent you a link to reset your password'}, status=status.HTTP_200_OK)
 
+
+class PasswordTokenCheckAPI(generics.GenericAPIView):
+    serializer_class = SetNewPasswordSerializer
+
+    def get(self, request, uidb64, token):
+        try:
+            id = smart_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(id=id)
+            if not PasswordResetTokenGenerator().check_token(user, token):
+                return Response({'error': 'Token is not valid, please request a new one'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'success': True, 'message': 'Credentials Valid', 'uidb64': uidb64, 'token': token}, status=status.HTTP_200_OK)
+        except DjangoUnicodeDecodeError as identifier:
+            if not PasswordResetTokenGenerator().check_token(user, token):
+                return Response({'error': 'Token is not valid, please request a new one'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+class SetNewPasswordAPIView(generics.GenericAPIView):
+    serializer_class = SetNewPasswordSerializer
+
+    def patch(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response({'success': True, 'message': 'Password reset success'}, status=status.HTTP_200_OK)
+
+
+class LogoutAPIView(generics.GenericAPIView):
+    """
+           This api is to log out the user
+           @return: release all resources from user on logging out
+    """
+    serializer_class = LogoutSerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def post(self, request):
+        try:
+            serializer = self.serializer_class(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            logger.error(e)
+            return Response({'details': 'something went wrong while logout'}, status=status.HTTP_403_FORBIDDEN)
+
+'''''
+class LogoutAPIView(generics.GenericAPIView):
+    """
+           This api is to log out the user
+           @return: release all resources from user on logging out
+    """
+    serializer_class = LoginSerializer
+
+    def get(self, request):
+        try:
+            user = request.user
+            logout(request)
+            logger.info('You have been successfully logged out, Thank You!!')
+            return Response({'details': 'You have been successfully logged out, Thank You!!'},
+                            status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(e)
+            return Response({'details': 'something went wrong while logout'}, status=status.HTTP_403_FORBIDDEN)
+'''''
