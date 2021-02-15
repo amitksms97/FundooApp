@@ -7,4 +7,4 @@ class UserAdmin(admin.ModelAdmin):
     list_display = ['username', 'email', 'created_at']
 
 
-admin.site.register(User, UserAdmin)
+admin.site.register(User)
