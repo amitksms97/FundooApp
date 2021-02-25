@@ -11,9 +11,16 @@ https://docs.djangoproject.com/en/3.1/ref/settings/
 """
 
 from pathlib import Path
+import os, logging
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+log_filename = "logs/Fundoo.log"
+os.makedirs(os.path.dirname(log_filename), exist_ok=True)
+formatter = logging.Formatter('%(levelname)s :%(asctime)s :%(pathname)s :%(lineno)s :%(message)s')
+file_handler = logging.FileHandler(filename=log_filename)
+file_handler.setFormatter(formatter)
 
 
 # Quick-start development settings - unsuitable for production
@@ -40,6 +47,7 @@ INSTALLED_APPS = [
     'user',
     'rest_framework',
     'drf_yasg',
+    'notes'
 ]
 
 MIDDLEWARE = [
@@ -173,3 +181,5 @@ LOGGING = {
         }
     }
 }
+REDIS_HOST = 'localhost'
+REDIS_PORT = 6379
