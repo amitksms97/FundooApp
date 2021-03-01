@@ -22,11 +22,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'username', 'password']
+        fields = ['firstname', 'lastname', 'email', 'username', 'password']
 
     def validate(self, attrs):
         email = attrs.get('email', '')
-        username = attrs.get('username', '')
+        username = attrs.get('  username', '')
         if not re.match(email, email):
             raise serializers.ValidationError(
                 self.default_error_messages)

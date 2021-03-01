@@ -7,5 +7,4 @@ urlpatterns = [
     path('', views.NoteCreateView.as_view(), name='create_note'),
     path('label/', views.LabelCreateView.as_view(), name='create_label'),
     path('note/', views.NoteCreateView.as_view(), name='create_note'),
-    path('noteupdate/<int:id>/', views.NoteUpdateView.as_view(), name='note_update'),
 ]

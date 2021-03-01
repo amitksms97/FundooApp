@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     'user',
     'rest_framework',
     'drf_yasg',
-    'notes'
+    'notes',
+    'django_short_url',
 ]
 
 MIDDLEWARE = [

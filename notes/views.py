@@ -5,20 +5,13 @@ from rest_framework.response import Response
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from rest_framework import generics
-import logging
 from django.shortcuts import get_object_or_404
 from datetime import datetime, timedelta
-
+import logging
 import json
 from django.core.cache import cache
+logger = logging.getLogger('django')
 
-
-import logging
-from FundooApp.settings import file_handler
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-logger.addHandler(file_handler)
 
 @method_decorator(login_required(login_url='/auth/login/'), name='dispatch')
 class ListNoteView(generics.ListAPIView):
@@ -30,6 +23,7 @@ class ListNoteView(generics.ListAPIView):
     serializer_class = NotesSerializer
     queryset = Notes.objects.all()
     logger.info("Notes listed successfully..!!")
+
 
 class NoteCreateView(GenericAPIView):
     """
@@ -73,6 +67,7 @@ class NoteCreateView(GenericAPIView):
             return Response({"response": serializer.data}, status=201)
         logger.error("Something went wrong while creating Note, from post()")
         return Response({"response": serializer.data}, status=400)
+
 
 @method_decorator(login_required(login_url='/auth/login/'), name='dispatch')
 class NoteUpdateView(GenericAPIView):
@@ -136,7 +131,7 @@ class NoteUpdateView(GenericAPIView):
         """
             Summary:
             --------
-                New note will be updated by the User.
+            New note will be updated by the User.
             Exception:
             ----------
                 KeyError: object
@@ -221,4 +216,3 @@ class LabelCreateView(GenericAPIView):
             get: User will get all the labels.
             post: User will able to create new label.
     """
-

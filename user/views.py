@@ -37,12 +37,12 @@ class RegisterView(generics.GenericAPIView):
             serializer.save()
             user_data = serializer.data
             user = User.objects.get(email=user_data['email'])
-            token = jwt.encode({'email': user.email}, settings.SECRET_KEY, algorithm='HS256')
+            token = jwt.encode({'email': user.email}, settings.SECRET_KEY, algorithm='HS256') #todo wrapper [1]. create your own token manager class
             current_site = get_current_site(request).domain
             relative_link = reverse('email-verify')
-            abs_url = 'http://' + current_site + relative_link + "?token=" + str(token)
+            abs_url = 'http://' + current_site + relative_link + "?token=" + str(token)  #todo check schema for http from server side
             email_body = 'Hi ' + user.username + \
-                         ' Use the link below to verify your email \n' + abs_url
+                         ' Use the link below to verify your email \n' + abs_url #todo create html body
             data = {'email_body': email_body, 'to_email': user.email,
                     'email_subject': 'Verify your email'}
             Util.send_email(data)
@@ -63,7 +63,7 @@ class VerifyEmail(views.APIView):
 
     def get(self, request):
         token = request.GET.get('token')
-
+# todo add a if statement to check for token or pass it through the url
         try:
             payload = jwt.decode(token, settings.SECRET_KEY, ['HS256'])
             user = User.objects.get(email=payload['email'])
@@ -89,9 +89,6 @@ class LoginAPIView(generics.GenericAPIView):
             @return: it will return the response of successful login
     """
     serializer_class = LoginSerializer
-
-#todo send token in headers
-#todo write docstring for the functions
 
     def post(self, request):
         try:
@@ -137,7 +134,7 @@ class RequestPasswordResetEmail(generics.GenericAPIView):
             email_body = 'Hello, \n Use link below to reset your password  \n' + \
                          abs_url + "?redirect_url=" + redirect_url
             data = {'email_body': email_body, 'to_email': user.email,
-                    'email_subject': 'Reset your passsword'}
+                    'email_subject': 'Reset your password'}
             Util.send_email(data)
         return Response({'message': 'We have sent you a link to reset your password'}, status=status.HTTP_200_OK)
 
@@ -192,6 +189,7 @@ class LogoutAPIView(views.APIView):
             return Response({'message': 'Invalid token'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             logger.error(e)
+            return Response({'Something went wrong please try again'})
 
 
 #todo
@@ -201,5 +199,11 @@ Include specific exceptions
 Methods not commented 
 Standard keys for response throughout the applications
 usage of different log levels have to be done
+create custom decorators 
+crud operation 
+concept of soft delete should be implemented
+date and time stamp should be maintained
 '''''
 #todo use a single key
+#gitignore file should be added
+#remove .idea file from git repisotry
