@@ -69,6 +69,7 @@ class VerifyEmail(views.APIView):
             user = User.objects.get(email=payload['email'])
             if not user.is_active:
                 user.is_active = True
+                user.is_verified = True
                 user.save()
             logger.info("Email Successfully Verified")
             return Response({'message': 'Successfully activated'}, status=status.HTTP_200_OK)
@@ -96,7 +97,7 @@ class LoginAPIView(generics.GenericAPIView):
             serializer.is_valid(raise_exception=True)
             user_data = serializer.data
             user = User.objects.get(email=user_data['email'])
-            token = jwt.encode({'id': user.id}, settings.SECRET_KEY, algorithm='HS256')
+            token = jwt.encode({'username': user.username}, settings.SECRET_KEY, algorithm='HS256')
             redis_instance.set(user.id, token)
             return Response({'username': user.username, 'token': token}, status=status.HTTP_200_OK)
         except jwt.ExpiredSignatureError as identifier:

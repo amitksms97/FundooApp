@@ -1,12 +1,12 @@
 from rest_framework.generics import GenericAPIView
-from .serializers import NotesSerializer, LabelSerializer
-from .models import Notes, Label
+from .serializers import NotesSerializer
+from .models import Notes
 from rest_framework.response import Response
 from django.utils.decorators import method_decorator
 from django.contrib.auth.decorators import login_required
 from rest_framework import generics
 from django.shortcuts import get_object_or_404
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 import json
 from django.core.cache import cache
@@ -63,7 +63,6 @@ class NoteCreateView(GenericAPIView):
         if serializer.is_valid():
             note = serializer.save(user_id=user.id)
             logger.info("New Note is created.")
-            logger.info("Data is stored in cache")
             return Response({"response": serializer.data}, status=201)
         logger.error("Something went wrong while creating Note, from post()")
         return Response({"response": serializer.data}, status=400)
@@ -180,39 +179,3 @@ class NoteUpdateView(GenericAPIView):
         except:
             logger.error("Note does not exist ")
             return Response({'response': 'Note is not exist'}, status=404)
-
-
-@method_decorator(login_required(login_url='/auth/login/'), name='dispatch')
-class LabelCreateView(GenericAPIView):
-    """
-        Summary:
-        --------
-            LabelCreate class will let authorized user to create and get labels.
-        --------
-        Methods:
-            get: User will get all the labels.
-            post: User will able to create new label.
-    """
-    serializer_class = LabelSerializer
-    queryset = Label.objects.all()
-
-    def get(self, request):
-
-        try:
-            user = request.user
-            labels = Label.objects.filter(user_id=user.id)
-            serializer = LabelSerializer(labels, many=True)
-            logger.info("Got the Labels, from get()")
-            return Response(serializer.data, status=200)
-        except Exception as e:
-            logger.error("Something went wrong, from get()")
-            return Response(e)
-    """
-        Summary:
-        --------
-            LabelCreate class will let authorized user to create and get labels.
-        --------
-        Methods:
-            get: User will get all the labels.
-            post: User will able to create new label.
-    """
