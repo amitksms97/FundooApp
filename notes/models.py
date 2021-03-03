@@ -2,7 +2,6 @@ from django.db import models
 from datetime import datetime
 import sys
 import os
-from colorful.fields import RGBColorField
 sys.path.append(os.getcwd() + '/..')
 from user.models import User
 

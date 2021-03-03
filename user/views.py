@@ -2,7 +2,7 @@ import redis
 from django.conf import settings
 from rest_framework.response import Response
 import logging
-from rest_framework import generics, status, views, permissions
+from rest_framework import generics, status, views
 from rest_framework import status
 from django.contrib.auth.models import User, auth
 from django.contrib.sites.shortcuts import get_current_site

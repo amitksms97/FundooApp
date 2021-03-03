@@ -1,31 +1,18 @@
+from django.conf import settings
+from psycopg2._psycopg import OperationalError
+from rest_framework import status
+from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView
+from rest_framework_jwt import jwt
+from user.models import User
 from .serializers import NotesSerializer
 from .models import Notes
 from rest_framework.response import Response
-from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
-from rest_framework import generics
-from django.shortcuts import get_object_or_404
-from datetime import datetime
 import logging
-import json
-from django.core.cache import cache
 logger = logging.getLogger('django')
 
 
-@method_decorator(login_required(login_url='/auth/login/'), name='dispatch')
-class ListNoteView(generics.ListAPIView):
-    """
-    Summary:
-    --------
-        All the notes will be listed for the user.
-    """
-    serializer_class = NotesSerializer
-    queryset = Notes.objects.all()
-    logger.info("Notes listed successfully..!!")
-
-
-class NoteCreateView(GenericAPIView):
+class NoteOperationsView(GenericAPIView):
     """
         Summary:
         --------
@@ -49,8 +36,10 @@ class NoteCreateView(GenericAPIView):
                     PageNotAnInteger: object
                     EmptyPage: object.
             """
-        user = request.user
-        notes = Notes.objects.filter(user_id=user.id, is_archive=False)
+        key = request.META['HTTP_TOKEN']
+        payload = jwt.decode(key, settings.SECRET_KEY, ['HS256'])
+        user = User.objects.get(username=payload['username'])
+        notes = Notes.objects.filter(user=user)
         serializer = NotesSerializer(notes, many=True)
         logger.info("Particular Note is obtained, from get()")
         return Response({"response": serializer.data}, status=200)
@@ -58,75 +47,18 @@ class NoteCreateView(GenericAPIView):
     def post(self, request):
 
         data = request.data
-        user = request.user
+        key = request.META['HTTP_TOKEN']
+        payload = jwt.decode(key, settings.SECRET_KEY, ['HS256'])
+        user = User.objects.get(username=payload['username'])
         serializer = NotesSerializer(data=data, partial=True)
         if serializer.is_valid():
-            note = serializer.save(user_id=user.id)
+            note = serializer.save(user=user)
             logger.info("New Note is created.")
             return Response({"response": serializer.data}, status=201)
         logger.error("Something went wrong while creating Note, from post()")
         return Response({"response": serializer.data}, status=400)
 
-
-@method_decorator(login_required(login_url='/auth/login/'), name='dispatch')
-class NoteUpdateView(GenericAPIView):
-    """
-        Summary:
-        --------
-            Existing note can be updated / deleted  by the User.
-        Exception:
-        ----------
-            KeyError: object
-    """
-    serializer_class = NotesSerializer
-    queryset = Notes.objects.all()
-
-    def get_object(self, request, id):
-        """
-            Summary:
-            --------
-                Specific note object will be fetched for the user based on id.
-            --------
-            Exception:
-                PageNotAnInteger: object
-                EmptyPage: object.
-        """
-        try:
-            user = request.user
-            queryset = Notes.objects.filter(user_id=user.id)
-            return get_object_or_404(queryset, id=id)
-        except Notes.DoesNotExist:
-            logger.error("id not present, from get_object()")
-            return Response({'response': 'Id not present'})
-
-    def get(self, request, id):
-        """
-            Summary:
-            --------
-                Specific note will be fetched for the user based on id.
-            --------
-            Exception:
-                PageNotAnInteger: object
-                EmptyPage: object.
-        """
-        try:
-            user = request.user
-            if cache.get(str(user.id)+"note"+str(id)):
-                note = cache.get(str(user.id)+"note"+str(id))
-                serializer = NotesSerializer(note)
-                logger.info("data from cache")
-                return Response({"response": serializer.data})
-            else:
-                note = self.get_object(request, id)
-                serializer = NotesSerializer(note)
-                logger.info("got Note successfully, from get()")
-                logger.info("data from db")
-                return Response({"response": serializer.data}, status=200)
-        except:
-            logger.error("something went wrong while getting Note, Enter the right id, from get()")
-            return Response(status=404)
-
-    def put(self, request, id):
+    def put(self, request):
         """
             Summary:
             --------
@@ -135,26 +67,30 @@ class NoteUpdateView(GenericAPIView):
             ----------
                 KeyError: object
         """
-        user = request.user
         try:
+            key = request.META['HTTP_TOKEN']
+            payload = jwt.decode(key, settings.SECRET_KEY, ['HS256'])
+            user = User.objects.get(username=payload['username'])
             data = request.data
-            instance = self.get_object(request, id)
-            serializer = NotesSerializer(instance, data=data)
+            serializer = NotesSerializer(user, data=data)
             if serializer.is_valid():
-                note_update = serializer.save(user_id=user.id)
+                note_update = serializer.save(user=user)
                 logger.info("Note updated succesfully, from put()")
-                cache.set(str(user.id)+"note"+str(id), note_update)
-                return Response({'details': 'Note updated succesfully'}, status=200)
+                return Response({'details': serializer.data}, status=200)
             logger.error("Note is not Updated something went wrong, from put()")
             return Response({'deatils': 'Note is not Updated..!!!'}, status=400)
-        # except:
-        #     logger.error("Something went wrong")
-        #     return Response(status=404)
+        except OperationalError as e:
+            logger.error(e)
+            return Response({'Message': 'Failed to connect with the database'}, status=status.HTTP_400_BAD_REQUEST)
+        except ValidationError as e:
+            logger.error(e)
+            return Response({'Message': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.error("Something went wrong")
-            return Response(e)
+            logger.error(e)
+            return Response({'Message': 'Failed to update note'}, status=status.HTTP_400_BAD_REQUEST)
+        #todo add exception for token/login check
 
-    def delete(self, request, id):
+    def delete(self, request):
         """
             Summary:
             --------
@@ -163,19 +99,24 @@ class NoteUpdateView(GenericAPIView):
             ----------
                 KeyError: object
         """
-        user = request.user
         try:
-            instance = self.get_object(request, id)
-            if instance.is_trashed:
-                instance.delete()
-                logger.info("Note is Deleted Permanently, from delete()")
-                return Response({'response': 'Note is Deleted'}, status=200)
-            else:
-                instance.is_trashed = True
-                instance.trashed_time = datetime.now()
-                instance.save()
-                logger.info("Note is Trashed")
-                return Response({'response': 'Your note is Trashed'}, status=200)
-        except:
-            logger.error("Note does not exist ")
-            return Response({'response': 'Note is not exist'}, status=404)
+            key = request.META['HTTP_TOKEN']
+            payload = jwt.decode(key, settings.SECRET_KEY, ['HS256'])
+            user = User.objects.get(username=payload['username'])
+            note = Notes.objects.filter(user=user)
+            note.delete()
+            logger.info("Note is Deleted Permanently, from delete()")
+            return Response({'response': 'Note is Deleted'}, status=200)
+        except ValidationError as e:
+            logger.error(e)
+            return Response({'Message': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
+        except OperationalError as e:
+            logger.error(e)
+            return Response({'Message': 'Failed to connect with the database'}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.error(e)
+            return Response({'Message': 'Failed to delete new note,Please try again later'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+#Todo lambda and filter and map and reduce
+
