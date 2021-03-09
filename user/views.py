@@ -97,9 +97,9 @@ class LoginAPIView(generics.GenericAPIView):
             serializer.is_valid(raise_exception=True)
             user_data = serializer.data
             user = User.objects.get(email=user_data['email'])
-            token = jwt.encode({'username': user.username}, settings.SECRET_KEY, algorithm='HS256')
+            token = jwt.encode({'id': user.id}, settings.SECRET_KEY, algorithm='HS256')
             redis_instance.set(user.id, token)
-            return Response({'username': user.username, 'token': token}, status=status.HTTP_200_OK)
+            return Response({'id': user.id, 'token': token}, status=status.HTTP_200_OK)
         except jwt.ExpiredSignatureError as identifier:
             logger.error(identifier)
             return Response({'message': 'Activation Expired'}, status=status.HTTP_400_BAD_REQUEST)

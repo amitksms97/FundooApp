@@ -7,7 +7,7 @@ class NotesTest(TestCase):
     """ Test module for Registration model """
 
     def setUp(self):
-        self.user = User.objects.create(email='amitksms97@gmail.com', username='amitksms97', password='amit123')
+        self.user = User.objects.create(email='King@gmail.com', username='King', password='king123')
         label = Label.objects.create(labelname='label 1', user=self.user)
         note = Notes.objects.create(user=self.user, title='First title', note='First note')
 
