@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.cache.backends.base import DEFAULT_TIMEOUT
 from django.db.models import Q
 from django.http import HttpResponse
 from psycopg2._psycopg import OperationalError
@@ -14,6 +16,9 @@ import logging
 
 from .utils import Utils
 from datetime import datetime, timedelta
+from django.core.cache import cache
+
+CACHE_TTL = getattr(settings, 'CACHE_TTL', DEFAULT_TIMEOUT)
 
 logger = logging.getLogger('django')
 
@@ -90,7 +95,6 @@ class NoteOperationsView(GenericAPIView):
                 KeyError: object
         """
         try:
-
             data = request.data
             user = TokenAuthorization.token_auth(request)
             serializer = NotesSerializer(user, data=data)
@@ -313,11 +317,13 @@ class ArchiveNotes(ListCreateAPIView):
 
     def post(self, request):
         try:
+            user = self.request.user
             note_id = request.data.get('note_id')
             note = Notes.objects.get(id=note_id)
             note.is_archive = True
             note.save()
-
+            cache.set(str(user) + "-notes-" + str(note.id))
+            logger.info("Note archived Successfully")
             return Response({'Message': 'Note is archived successfully'}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(e)
@@ -334,16 +340,20 @@ class ArchiveNotes(ListCreateAPIView):
 
     def put(self, request):
         try:
+            user = self.request.user
             note_id = request.data.get('note_id')
             note = Notes.objects.get(id=note_id)
             note.is_archive = False
             note.save()
+            cache.set(str(user) + "-notes-" + str(note.id))
+            logger.info("Note Unarchived Successfully")
             return Response({'Message': 'Note is Unarchived successfully'}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.error(e)
 
 
 class TrashNotes(ListCreateAPIView):
+    serializer_class = NotesSerializer
 
     def post(self, request):
         try:
@@ -385,7 +395,6 @@ class AddReminderToNotes(ListCreateAPIView):
         try:
             user = self.request.user
             logger.info("Data Incoming from the database")
-            # return Notes.objects.filter(reminder__isnull=False)
             note = Notes.objects.filter(owner_id=1, reminder__isnull=False)
             reminder = note.values('reminder')
             print(reminder)
@@ -399,7 +408,7 @@ class AddReminderToNotes(ListCreateAPIView):
 
 class SendReminderEmail(GenericAPIView):
     """
-               This api is for registration of new user
+              This api is for registration of new user
               @param request: username,email and password
               @return: it will return the registered user with its credentials
     """
@@ -429,21 +438,3 @@ class SendReminderEmail(GenericAPIView):
             logger.error(e)
             return Response({'Message': 'Invalid Data'}, status=status.HTTP_400_BAD_REQUEST)
 
-
-'''
-Exception handling in code
-Include specific exceptions
-Methods should be commented
-Standard keys for response throughout the applications
-Usage of different log levels have to be done
-Fix swagger and show API working
-Celery for sending emails
-Show working test cases
-Learn about decorator and how to use custom decorator
-Use debugging regularly
-Soft delete notes
-Response token in header
-Use gitignore properly
-Understand use of init.py
-Remove init dir from git
-'''

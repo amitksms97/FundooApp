@@ -81,7 +81,6 @@ class VerifyEmail(views.APIView):
             logger.error(e)
             return Response("Something went wrong")
 
-#todo use different level of loggers
 
 class LoginAPIView(generics.GenericAPIView):
     """
@@ -193,7 +192,6 @@ class LogoutAPIView(views.APIView):
             return Response({'Something went wrong please try again'})
 
 
-#todo
 '''''
 Exception handling in code
 Include specific exceptions
@@ -205,6 +203,3 @@ crud operation
 concept of soft delete should be implemented
 date and time stamp should be maintained
 '''''
-#todo use a single key
-#gitignore file should be added
-#remove .idea file from git repisotry

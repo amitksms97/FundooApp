@@ -12,5 +12,4 @@ urlpatterns = [
     path('archive/', ArchiveNotes.as_view()),
     path('remmail/', SendReminderEmail.as_view()),
     path('reminder/', AddReminderToNotes.as_view(), name='reminder'),
-
 ]
