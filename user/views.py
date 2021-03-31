@@ -83,6 +83,7 @@ class VerifyEmail(views.APIView):
 
 #todo use different level of loggers
 
+
 class LoginAPIView(generics.GenericAPIView):
     """
             This API is used for authentication of the user
@@ -179,9 +180,9 @@ class LogoutAPIView(views.APIView):
             else:
                 result = redis_instance.delete(user.id)
                 if result == 1:
-                    return Response("Successully logged out", status=status.HTTP_200_OK)
+                    return Response("Successful logged out", status=status.HTTP_200_OK)
                 else:
-                    return Response("Failed to logout please re login", status=status.HTTP_400_BAD_REQUEST)
+                    return Response("Failed to logout please login again", status=status.HTTP_400_BAD_REQUEST)
         except jwt.ExpiredSignatureError as identifier:
             logger.error(identifier)
             return Response({'message': 'Activation Expired'}, status=status.HTTP_400_BAD_REQUEST)

@@ -1,1 +1,7 @@
-.idea
+/FundooApp/notes/migrations/
+/FundooApp/user/migrations/
+/FundooApp/.idea/
+/FundooApp/logs/
+celerybeat-schedule.bak
+celerybeat-schedule.dat
+celerybeat-schedule.dir

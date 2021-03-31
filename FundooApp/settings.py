@@ -42,7 +42,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'drf_yasg',
     'notes',
-    'django_short_url',
 ]
 
 MIDDLEWARE = [
@@ -84,7 +83,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'UserRegistration',
         'USER': 'postgres',
-        'PASSWORD': '1234',
+        'PASSWORD': 'Kum500081TS@',
         'HOST': 'localhost',
         'PORT': '5432',
     }
